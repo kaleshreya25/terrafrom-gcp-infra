@@ -1,0 +1,42 @@
+name: 'Terraform'
+
+on:
+  push:
+    branches: [ "gcp-infra-dev" ]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  terraform:
+    name: 'Terraform'
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: envs/dev  # All commands run from envs/dev/
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+
+      - name: Terraform Init
+        run: terraform init
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GCP_SA_KEY_DEV }}
+
+      - name: Terraform Plan
+        run: terraform plan -input=false -var-file="dev.tfvars"
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GCP_SA_KEY_DEV }}
+
+      - name: Terraform Apply
+        if: github.event_name == 'push' && github.ref_name == 'gcp-infra-dev'
+        run: terraform apply -auto-approve -input=false -var-file="dev.tfvars"
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GCP_SA_KEY_DEV }}
